@@ -1,0 +1,275 @@
+/*
+ *      main.css
+ *
+ *  Version 1.1
+ *
+ *  29 Nov 2022  Changed header and header h1 colors
+ *               Moved .Toggled to header instead of h1. Can control colors on both that way
+ *
+ */
+
+
+* {
+  box-sizing: border-box;
+  margin: 0px;
+  padding: 0px;
+  /* border: 0px; NOTE: Do NOT zero out border, it breaks <hr> */
+}
+
+canvas {
+  /* Canvas are inline, so they take up space below them, like text does to leave space for descenders */
+  vertical-align: bottom;
+  /* Canvas are inline, so they take up space below them, like text does to leave space for descenders */
+  position: absolute;
+}
+
+
+html {
+  --FancyFont: "Calisto MT", Georgia, serif;
+  --NiceFont: 'Trebuchet MS', "Lucida Sans", sans-serif;
+  --SharpFont: "Century Gothic", CenturyGothic, AppleGothic, sans-serif;
+  --CursiveFont: 'Brush Script MT', 'Brush Script Std', cursive; /* Hard to read, not on Cell phones */
+  --FantasyFont: Copperplate, Papyrus, fantasy;
+
+  /* Color variable definitions */
+  --DarkestColor: black;
+  --DarkerColor: #333;
+  --DarkColor: Gray;
+  --MediumColor: LightSlateGray;
+  --NormalColor: LightGray;
+  --LightColor: beige;
+  --SkyBlue: #009cd8;
+
+
+  font-size: 16px;  /* rem is always based on the <html> font size. Browsers generaly use 16 */
+}
+
+body {
+  /* border: solid 2px red; */
+  font-family: var(--FantasyFont);
+
+  background-color: var(--NormalColor);
+
+  width: 100vw;
+  max-width: 100%;  /* NOTE: Fixes horizontal scroll bar being created JUST when there is a vertical scroll bar */
+}
+
+
+.AllContent {
+  /* border: solid 2px orange; */
+  position: relative;
+
+  min-height: 100vh;   /* Starts full window */
+  height: max-content; /* But can grow with content to taller than window */
+
+  display: grid;
+  grid-template-areas:
+              "Header"
+              "Menu"
+              "Status"
+              "Content"
+              "Footer";
+  /* Let horizontal re-size while maxing out at 1024px */
+  /* grid-template-columns: minmax(0px, 1024px); */
+  grid-template-columns: 100%;
+  /*                   Header,     Menu,            Status,        Content, Footer */
+  /* grid-template-rows: 80px   max-content   minmax(0, max-content) auto  max-content; */
+  grid-template-rows: max-content max-content minmax(0, max-content) auto  max-content;
+
+  justify-content: center; /* center our layout horizontally, IF it does not fill the screen width */
+  /* align-content: center; /* stretch is the default */
+}
+
+
+header {
+  /* border: solid 2px green; */
+
+  grid-row: Header;
+
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-family:  Creepy,        serif;
+
+  text-align: center; /* Center elements horizontally */
+  /* text-indent: 20px;  /* If NOT centered */
+  text-transform: uppercase;
+
+  background-color: var(--MediumColor);
+
+  box-shadow: inset 2px 2px 3px tan, inset -2px -2px 3px tan;
+  border-radius: 4px;
+}
+header.Paused {
+  background-color: var(--NormalColor);
+}
+header h1 {
+  color: var(--NormalColor);
+  text-shadow: 2px 3px 5px black;
+}
+header.Paused h1 {
+  color: var(--NormalColor);
+  text-shadow: inset 2px 3px 5px black;
+}
+
+
+.MenuArea {
+  /* border: solid 2px pink; */
+  background-color: var(--DarkColor);
+
+  grid-row: Menu;
+  align-self: center; /* Verticaly in grid space */
+  /*justify-self: center; /* Horizontaly in grid space */
+}
+
+
+.StatusArea {
+  /* background-color: cyan; */
+  box-shadow: inset 2px 2px 3px tan, inset -2px -2px 3px tan;
+
+  grid-row: Status;
+  align-self: center; /* Verticaly in grid space */
+  /*justify-self: center; /* Horizontaly in grid space */
+}
+#StatusID {
+  /* background-color: yellow; */
+  height: 40px;
+  line-height: 1.0rem;
+
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.ContentArea {
+  /* border: solid 2px blue; */
+  box-shadow: inset 2px 2px 3px tan, inset -2px -2px 3px tan;
+
+  font: 18px "Informal Roman", times, serif;
+
+  grid-row: Content;
+}
+
+
+footer {
+  background-color: beige;
+
+  grid-row: Footer; /* Going to end up there by default anyway */
+
+  padding: 5px 10px;
+
+  font-size: 0.8rem;  /* Make the same as img width */
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+}
+footer img {
+  width: 0.8rem;  /* Make the same as font-size */
+}
+footer a {
+  margin: 0 auto; /* Center Facebook link */
+}
+
+
+Button {
+  text-decoration: none;
+  border-radius: 0.4rem;
+  box-shadow: 2px 2px 2px rgba(8, 59, 42, 0.96);
+
+  margin: 4px;
+  padding: 1px 3px;
+  cursor: pointer;
+}
+Button:hover {
+  opacity: .5;
+}
+
+
+#StatusID {
+  /* background-color: gray; */
+
+  /* text-align: center; */
+}
+
+
+.SliderContainer {
+  background-color: var(--DarkColor);
+  box-shadow: inset 0px 0px 8px var(--NormalColor); /* Softens the edge */
+  border-radius: 6px;
+
+  width: max-content;
+  padding: 2px 20px;
+}
+input[type=range] {
+  margin: 0px 3px;
+  outline: none;
+
+  vertical-align: middle;  /* Move the min&max numbers up even with slider */
+  padding: 3px 0px;  /* left&right cause the slider to STOP at those limits on Chrome */
+
+  cursor: pointer;
+
+  appearance: none; /* NOTE IMPORTANT Need this else the settings below have no effect */
+    background: var(--NormalColor);
+    height: 12px;
+    border-radius: 8px;
+}
+label[for="SliderID"] {
+  margin-left: 6px;
+  margin-right: 0.7rem;
+}
+.SliderValue {
+  border-radius: 4px;
+
+  margin-left: 6px;
+  margin-right: 30px;
+}
+
+
+
+.Hidden, .HideContent {
+  display: none;
+}
+
+
+hr .Fancy {
+  border: solid 1px gray;
+  margin: 5px;
+  border-top: 3px double #333;
+}
+
+
+.Smiley {
+  /* color: orange; */
+  font-size: 26px;
+}
+
+
+/* Arrows (triangles),
+ * Down Solid \25bc, Down Hollow \25bd
+ * Left Solid \25c0, Left Hollow \25c1
+ * Right Solid \25b7, Right Hollow \25b6
+ * uP Solid \25b3, uP Hollow \25b2
+ *
+ * DOWN ARROW. The html escape chars do NOT work here &dArr; or &#8595;
+ */
+.UpArrow::before {
+  content: "\25b2";
+  margin-right: 4px;
+}
+.DownArrow::before {
+  content: "\25bC";
+  margin-right: 4px;
+}
+.LeftArrow::before {
+  content: "\25C0";
+  margin-right: 4px;
+}
+.RightArrow::before {
+  content: "\25b7";
+  margin-right: 4px;
+}
+
+
+
+
+
+/*  */

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <title>LIBRARY TESTS</title>
+
+    <link rel="icon" href="icons/paint_brush.png">             <!-- Browser tab favicon -->
+    <link rel="shortcut icon" href="icons/paint_brush.png">    <!-- Android shortcut icon -->
+    <link rel="apple-touch-icon" href="icons/paint_brush.png"> <!-- Apple shortcut icon -->
+
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="author" content="Ray Wallace">
+    <meta name="description" content="">
+    <meta name="keywords" content=",">
+
+    <!-- Load our .css style files -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/tests.css">
+
+    <!-- Load Javascript Libraries -->
+    <script defer src="versions.js"></script>
+    <script defer src="full_screen.js"></script>
+    <script defer src="sound.js"></script>
+    <script defer src="canvas.js"></script>
+    <script defer src="dialog_box.js"></script>
+    <script defer src="math.js"></script>
+    <script defer src="helpers.js"></script>
+    <script defer src="files.js"></script>
+    <!-- <script defer src="files_module.js"></script> -->
+    <script defer src="history.js"></script>
+
+    <!-- Load Javascript Files -->
+    <script defer src="javascript/canvas_tests.js"></script>
+    <script defer src="javascript/file_tests.js"></script>
+    <script defer src="javascript/tests.js"></script>
+  </head>
+
+
+  <body>
+    <div class="AllContent">
+
+      <header>
+        <h1>LIBRARY TESTS</h1>
+      </header>
+
+
+      <nav class="MenuArea">
+        <!-- <a href="index.html">Home</a>
+        <a href="About.html">About</a> -->
+        <button onclick="fileTestsOnClick(event)" type="button" name="button">File Tests</button>
+        <button onclick="canvasTestsOnClick(event)" type="button" name="button">Canvas Tests</button>
+        <button type="button" name="button" onclick="drawObjectOnClick(event)">Draw Object</button>
+        <button type="button" name="button" onclick="clearCanvasOnClick(event)">Clear Canvas</button>
+        <button type="button" name="button" onclick="resetXYOnClick(event)">Reset X Y</button>
+      </nav>
+
+
+      <div class="StatusArea">
+        <div id="StatusID">
+          Starting up
+        </div>
+
+        <div class="SliderContainer">
+          <label for="SliderID">Percentage</label> 0<input id="SliderID" type="range" min="0" max="100" value="0">100 <span id="SliderValueID"></span>
+        </div>
+
+        <img id="ImageID" width="100" height="100" src="TestFiles/icon.png"> Image </img>
+
+        <div id="TestAreaID">
+          Test Area
+        </div>
+      </div>
+
+      <section class="ContentArea">
+        <!-- <p> PLACE CANVAS OR OTHER CONTENT HERE </p> -->
+      </section>  <!-- End ContentArea -->
+
+
+      <footer>
+        <span>Copyright &copy; <span class="Year">2022</span> </span>
+        <span><span class="Email"><a href=
+            "mailto:Ray@RipsPics.com?bcc=HoudiniJr@GMail.com&subject=RipsPics%20website"
+          target="_blank" title="Website Query">Ray@RipsPics.com</a></span> <span class="Version"></span></span>
+      </footer>
+
+    </div>  <!-- End AllContent -->
+
+  </body>
+</html>

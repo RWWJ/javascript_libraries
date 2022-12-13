@@ -1,0 +1,25 @@
+
+
+#ImageID {
+  width: max-content;
+  margin: 5px;
+
+  border: solid 2px Tomato;
+  border-radius: 10px;
+}
+
+
+#TestAreaID {
+  padding: 5px;
+  margin: 5px;
+
+  border: solid 2px IndianRed;
+  border-radius: 10px;
+
+  overflow: auto;
+  resize: both;
+}
+
+
+
+/*  */

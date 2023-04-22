@@ -10,6 +10,7 @@
 // soundTime( )
 // playNote( noteName )
 //
+// examplePlayNoteRandomMusic( )
 
 
 var SoundJsVersion = "1.1";
@@ -18,12 +19,12 @@ var SoundJsVersion = "1.1";
 // Arrays of Frequency and associated music Notes
 let Frequency = [1318.51, 1174.66, 1046.5, 987.767, 880, 783.991, 698.456, 659.255, 587.33, 523.251, 493.883, 436.04, 392.44, 349.228, 329.628, 293.665, 261.626, 246.942, 220, 195.998, 174.614, 164.8, 146.8, 130.8,
 123.5, 110.0, 98.0, 87.31, 82.41, 73.42, 65.41, 61.74, 55.0, 49.0, 43.65, 41.2, 36.71, 32.7,
-// NOTE: These low notes have really low (percieved) volume
+// NOTE: These low notes have a really low (percieved) volume
 30.87, 27.5, 24.5, 21.83, 20.6, 18.35, 16.35
 ];
 let Notes = ["E6", "D6", "C6", "B5", "A5", "G5", "F5", "E5", "D5", "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4", "B3", "A3", "G3", "F3", "E3", "D3", "C3",
 "B2", "A2", "G2", "F2", "E2", "D2", "C2", "B1", "A1", "G1", "F1", "E1", "D1", "C1",
-// NOTE: These low notes have really low (percieved) volume
+// NOTE: These low notes have a really low (percieved) volume
 "B0", "A0", "G0", "F0", "E0", "D0", "C0"
 ];
 
@@ -51,7 +52,7 @@ function playNote( noteName, noteTime=1.3, volumeLevel=1.0, atTime=null ) {
   let volume = AudioProcessor.createGain();  // Values from -~ to +~ (infinite). The default value is 1 (when the gain node is created)
   // Look up noteName in the Notes array
   let noteIndex = Notes.indexOf(noteName.toUpperCase());
-  let note = noteIndex >= 0 ? noteIndex : 0;
+  let noteFreq =  Frequency[ noteIndex >= 0 ? noteIndex : 0 ];
 
   // Use .currentTime if an atTime is not specified, that is, start playing imediately
   // Also, don't start in the past
@@ -64,7 +65,7 @@ function playNote( noteName, noteTime=1.3, volumeLevel=1.0, atTime=null ) {
   volume.gain.linearRampToValueAtTime( 0, atTime + noteTime );  // Play for some amount of time
 
   oscilator.type = "sine";
-  oscilator.frequency.value = Frequency[note];
+  oscilator.frequency.value = noteFreq;
   oscilator.start( atTime );
   oscilator.stop( atTime + noteTime );  // Play for some amount of time
 
@@ -106,6 +107,44 @@ function examplePlayNoteRandomMusic(  ) {
   }
 
 }
+
+
+
+//
+// Returns frequency
+//
+function noteToFrequency( noteNum ) {
+    let freqHz = 0;
+
+  // noteNum is a note on the keyboard
+  // 440hz is the frequency of A4 (49th note/key)
+  if( noteNum && noteNum < 109 ) {
+    freqHz = Math.pow( 2, ((noteNum - 49) / 12) ) * 440;
+  }
+
+  return freqHz;
+}
+
+
+//
+// Return {freq:0, name:""}
+//
+function note( noteNum ) {
+  let noteNames = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"];
+  let name = "";
+
+  // Look up noteName in the Notes array
+  let noteIndex = Notes.indexOf(noteName.toUpperCase());
+  let freq = Frequency[ noteIndex >= 0 ? noteIndex : 0 ];
+  // let freq = noteToFrequency( noteNum );
+
+  if( noteNum ) {
+    name = noteNames[ (noteNum % 12) - 1 ];
+  }
+
+  return { freq, name: name };
+}
+
 
 
 

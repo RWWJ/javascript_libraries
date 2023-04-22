@@ -21,6 +21,16 @@
 //               v1.9a
 //  11 Dec 2022  Renamed LocalStorage functions and changed parameter order for toLocalStorage() nee jsonToLocalStorage()
 //               v1.10
+//  12 Jan 2023  Added listLocalStorage()
+//               v1.11
+//  21 Jan 2023  Added fileGetImageData( ), fileSaveBinary()
+//               Added element to fileGetImageData()
+//               v1.12
+//   2 Feb 2023  Added  fileGetFileObj()
+//               v1.13
+//   9 Mar 2023  Added filename to error message in fileReadJson()
+//               v1.14
+//
 
 
 
@@ -29,21 +39,21 @@
 //    Creates FileWaitingOnFiles global variable for keep tracking of pending file operations
 //
 
-var FilesJsVersion = "1.10";
+var FilesJsVersion = "1.14";
 
 // let LocalStoragePrefix = ""; // If app does not define, then we default to "RWWJ_"
 
 
 // Import all with this statement (NOTE: change the directory as appropriate)
-//import {fileReplaceExt, fileFileOfImageTextFiles, loadNextImage, fileFileOfTextFiles, fileReadText, fileSaveText,
-//        fileSaveLargeText, fileSaveJson, fileSaveCanvas, fileReadJson, fileNamePrompt, fileLoadImage,
-//        removeLocalStorage, deleteLocalStorage, fromLocalStorage, toLocalStorage, clearLocalStorage }
+//import {fileReplaceExt, fileFileOfImageTextFiles, loadNextImage, fileFileOfTextFiles, fileReadText, fileReadTextPrompt, fileSaveBinary, fileSaveText, fileSaveLargeText,
+//        fileSaveJson, fileSaveCanvas, fileSaveLargeCanvas, fileReadJson, fileReadJsonPrompt, fileNamePrompt, fileLoadImage, fileGetImageData, fileGetFileObj,
+//        removeLocalStorage, deleteLocalStorage, fromLocalStorage, toLocalStorage, clearLocalStorage, listLocalStorage }
 //        from "../Javascript-Libraries/Files-Module.js";
 
 
-// export {fileReplaceExt, fileFileOfImageTextFiles, loadNextImage, fileFileOfTextFiles, fileReadText, fileSaveText,
-//         fileSaveLargeText, fileSaveJson, fileSaveCanvas, fileReadJson, fileNamePrompt, fileLoadImage,
-//         removeLocalStorage, deleteLocalStorage, fromLocalStorage, toLocalStorage, clearLocalStorage };
+// export {fileReplaceExt, fileFileOfImageTextFiles, loadNextImage, fileFileOfTextFiles, fileReadText, fileReadTextPrompt, fileSaveBinary, fileSaveText, fileSaveLargeText,
+//         fileSaveJson, fileSaveCanvas, fileSaveLargeCanvas, fileReadJson, fileReadJsonPrompt, fileNamePrompt, fileLoadImage, fileGetImageData, fileGetFileObj,
+//         removeLocalStorage, deleteLocalStorage, fromLocalStorage, toLocalStorage, clearLocalStorage, listLocalStorage };
 
 
 //
@@ -54,9 +64,11 @@ var FilesJsVersion = "1.10";
 // loadNextImage( next, max, fileList, callback )
 // fileFileOfTextFiles( fileName, callback )
 // fileReadText( fileName, callback )
-// fileReadTextPrompt( fileName, callback )
+// fileReadTextPrompt( callback )
+// fileSaveBinary( defaultFileName, data )
 // fileSaveText( defaultFileName, text )
 // fileSaveLargeText( defaultFileName, text )
+//
 // fileSaveJson( defaultFileName, jsonObj )
 // fileSaveCanvas( defaultFileName, canvas )
 // fileSaveLargeCanvas( defaultFileName, canvas )
@@ -66,6 +78,9 @@ var FilesJsVersion = "1.10";
 // fileNamePrompt( extensions=".json", callback=null )
 // fileLoadImage( fileName, callback=null )
 // fileLoadImageCore( fileName, callback )
+// fileGetImageData( callback=null )
+// fileGetFileObj( mimeType = "*.*", callback=null )  --- returns {fileName, file, src}
+//
 // removeLocalStorage( variableName )
 // deleteLocalStorage( variableName )
 // fromLocalStorage( name )
@@ -73,7 +88,7 @@ var FilesJsVersion = "1.10";
 // toLocalStorage( name, value )
 // --- jsonToLocalStorage(variable, variableName ) // Deprecated, use toLocalStorage()
 // clearLocalStorage( name )
-
+// listLocalStorage( )
 
 
 let FileWaitingOnFiles = 0;
@@ -264,6 +279,30 @@ function fileReadTextPrompt( callback=null ) {
 
 
 //
+// Shows a file dialog for user to select binary (image, etc...) file name and folder
+// Writes binary data to the selected file
+//
+// NO indication of failure, success, done writing or canceling by user
+//
+function fileSaveBinary( defaultFileName, data ) {
+  let fileURL;
+  let aElement = document.createElement( "a" );  // Create a <a> tag (hyperlink)
+
+  aElement.download = defaultFileName;  // The download attribute causes the browser to download instead of navigate
+
+  // let fileData = new Blob( data );
+  fileURL = URL.createObjectURL( new Blob([data]) );
+
+  aElement.href = fileURL;
+
+  aElement.click( );  // Trigger the save dialog
+
+  URL.revokeObjectURL( fileURL );
+}
+
+
+
+//
 // Shows a file dialog for user to select text file name and folder
 // Writes text to the selected file
 //
@@ -398,7 +437,7 @@ function fileSaveLargeCanvas( defaultFileName, canvas ) {
 //
 function createImgElement( idSubtring ) {
   // Reusable ID
-  let ImageID = "__Img_"+idSubtring+"ID";
+  let ImageID = `__Img_${idSubtring}ID`;
 
   // Attempt to get the <img> that we may have previously created
   let imgElement = document.getElementById( ImageID );
@@ -439,7 +478,7 @@ function fileReadJson( fileName, callback ) {
 
       return jsonStream;
     } )
-    .then( jsonObj => returnJson = jsonObj, error => {console.error("Bad .json file: "+error)} )  // Save json for .finally()
+    .then( jsonObj => returnJson = jsonObj, error => console.error(`Bad .json file, ${fileName}: ${error}`) )  // Save json for .finally()
     .finally( () => {
       --FileWaitingOnFiles; // File operation no longer pending
 
@@ -579,6 +618,67 @@ function fileLoadImageCore( fileName, callback ) {
 
 
 //
+// Show a file open dialog box
+// Returns the image data of the selected file
+//
+// Return null to callback on error, otherwise return {fileName,image,element} object
+//
+function fileGetImageData( callback=null ) {
+  let imageElement = document.createElement( "img" );
+  let inputFileElement = document.createElement( 'input' );
+
+  inputFileElement.type = 'file';
+  inputFileElement.accept = "image/png, image/*";
+
+  inputFileElement.onchange = (event) => {  // Wait for our faked .click() below
+    let fileName = event.target.files[0].name;
+    let file = event.target.files[0];
+    let fileReader = new FileReader( );
+
+    // Create a URL refernce to the file blob (just a refernce, it is not the actual data like a dataURL)
+    imageElement.src = URL.createObjectURL( file ); // Make available incase caller want's to display the image as well as use the binary data
+
+    fileReader.onload = event => {  // loadend event ( .onloadend ) happens whether successfull or not. load event (.onload) only for success
+      if( callback ) callback( {fileName:fileName, image:event.target.result, element:imageElement} );
+    };
+    fileReader.readAsArrayBuffer( file );  // Trigger file read
+
+  };
+
+  inputFileElement.click();    // Initiate the File dialog box
+}
+
+
+
+//
+// Show a file open dialog box
+//
+// Returns the filename and file object of selected file {fileName, file, src}
+//   The file object is usable as a parameter to URL.createObjectURL(), FileReader, fetch( {body:file} ), etc...
+//   The src can be used as the file src for an img element, etc...
+//
+// Return null to callback on error, otherwise return {fileName, image, src} object
+//
+function fileGetFileObj( mimeType = ".*", callback=null ) {
+  let inputFileElement = document.createElement( 'input' );
+
+  inputFileElement.type = 'file';
+  inputFileElement.accept = mimeType; // e.g. "image/png, image/*";
+
+  inputFileElement.onchange = (event) => {  // Wait for our faked .click() below
+    let fileName = event.target.files[0].name;
+    let file = event.target.files[0];
+    let src = URL.createObjectURL( file ); // Make available incase caller want's to display the image as well as use the binary data
+
+    if( callback ) callback( { fileName, file, src } );
+  };
+
+  inputFileElement.click();    // Initiate the File dialog box
+}
+
+
+
+//
 // Remove a variable from localStorage (browser "internal" storage)
 //
 // Previously called removeFromLocalStorage()
@@ -634,6 +734,20 @@ function clearLocalStorage( name = null ) {
 
   if( name ) localStorage.removeItem(prefix + name);
   else localStorage.clear( );
+}
+
+
+//
+// Return an array of names of all entries in LocalStorage
+//
+function listLocalStorage( ) {
+  let list = [];
+
+  for( let keyNum = 0; keyNum < localStorage.length;++ keyNum ) {
+    list.push( localStorage.key( keyNum ) );
+  }
+
+  return list;
 }
 
 

@@ -1,10 +1,36 @@
 
+* {
+  box-sizing: border-box;
+  margin: 0px;
+  padding: 0px;
+}
+
+body {
+  background-color: LightGray; /* LightSlateGray; /* DarkSlateGray; /* Tomato; */
+}
+
+
+.Container {
+  position: relative;
+  width: 95%;
+  height: 600px;
+  margin: 5px;
+
+  border: solid 2px IndianRed;
+}
+
+
+.Dialog:hover {
+  outline: solid 6px rgba(190, 200, 0, 0.4);
+  z-index: 10;
+}
+
 
 #ImageID {
   width: max-content;
   margin: 5px;
 
-  border: solid 2px Tomato;
+  border: solid 2px IndianRed;
   border-radius: 10px;
 }
 
@@ -19,6 +45,15 @@
   overflow: auto;
   resize: both;
 }
+
+
+#CanvasID {
+  margin: 5px;
+
+  border: solid 2px brown;
+}
+
+
 
 
 

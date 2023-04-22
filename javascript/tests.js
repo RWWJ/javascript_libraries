@@ -2,17 +2,28 @@
 //     tests.js
 //
 
+//
+//  16 Dec 2022  Changed version test to run from menu button, not at init
+//               Added TestAreaElement global
+//               V2.1
+//
 
 
-const TestsJsVersion = "2.0";
+
+const TestsJsVersion = "2.1";
+
 
 const FirstYear = "2021";
+
+
+var Houdini = false;
 
 let CanvasObj = null;
 
 let Paused = false; // Toggled by the pressing either the "p" or "P" keys
 
 let StatusElement = document.getElementById( "StatusID" );
+let TestAreaElement = document.getElementById( "TestAreaID" );
 
 
 
@@ -30,6 +41,8 @@ function init( ) {
   if( FirstYear == thisYear ) document.querySelector( "footer .Year" ).innerText = thisYear;
   else document.querySelector( "footer .Year" ).innerText = `${FirstYear} - ${thisYear}`;
 
+  TestAreaElement.innerText = "";
+
   // Alow for easily adding more sliders
   initSlider( "SliderID", "SliderValueID", useSliderValue );
 
@@ -46,8 +59,9 @@ function init( ) {
     }
   } );
 
+
+
   status( "Initialization complete.")
-  status( versions() );
 }
 
 
@@ -56,6 +70,11 @@ function togglePaused( ) {
 
   if( !Paused ) document.querySelector("header").classList.remove("Paused");
   else document.querySelector("header").classList.add("Paused");
+}
+
+
+function versionTestOnClick( ) {
+  testArea( versions() );
 }
 
 
@@ -165,13 +184,41 @@ function status( text ) {
 }
 
 
+
+function testArea( text ) {
+  if( TestAreaElement ) {
+    TestAreaElement.innerText += "\n" + text;
+
+    TestAreaElement.innerText.scrollTop = TestAreaElement.innerText.scrollHeight;
+  }
+  else console.log( `testArea(): ${text}` );
+}
+
+
+
 function initCanvas( ) {
   CanvasObj = new Canvas( document.querySelector(".ContentArea") );
 }
 
 
+
 function windowOnResize( event ) {
   // Canvas resizing is handled by the Canvas class object
+}
+
+
+//
+// Toggle Houdini when user Alt-clicks on my EMail address
+//
+// css can target .Houdini to markup the <a> email address element (highligt, add text :after, etc...)
+//
+function houdini( event ) {
+  if( event.altKey ) {
+    Houdini = !Houdini;
+
+    if( Houdini ) event.target.classList.add( "Houdini" );
+    else          event.target.classList.remove( "Houdini" );
+  }
 }
 
 

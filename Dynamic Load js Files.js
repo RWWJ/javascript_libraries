@@ -11,8 +11,8 @@
 
   document.body.appendChild( script );
 
-  // The functions in the .js file are NOT available imediately!!!
-  // So delay for 100ms and THEN access one of the functions
+  // The functions in the .js file are NOT available immediately!!!
+  // So (JUST for test purposes) delay for 100ms and THEN access one of the functions
   setTimeout( () =>
     DialogActions( "We loaded a Javascript (.js) file!!!", [{name:"OK",action:()=>setStatus("OK Then")}], 100, 50 ), 100);
 

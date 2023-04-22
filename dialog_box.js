@@ -18,13 +18,41 @@
 //  21 Nov 2022  Fixed the handling of x,y defaults in createButton()
 //               Added a Close button in createDialogBox(), which will affect DialogOk() and all the others that use it
 //               Version 1.3
+//  16 Dec 2022  Changed createDialogBox() to NOT close when clicked on, only when CLOSE button is clicked
+//               Modified all the functions that were overriding createDialogBox()'s onclick
+//               Major edit to DialogMenu() to deal with close button and it's own buttons
+//               Lots more fixes to DialogMenu() to work correctly with recent changes
+//               Fixed makeDOMId() to NOT include spaces in the ID name
+//               Fixed DialogYesNo() to not close when dialog box was clicked on
+//               V1.4
+//  18 Dec 2022  Fixed centering code in createDialogBox2()
+//               V1.4a
+//  20 Dec 2022  Fixed createButton() x & y error and removed them from paramater list
+//               V1.4b
+//  23 Dec 2022  Added cssColorDefaults( ) and a call to it
+//               Removed all use of makeDOMId().
+//               Removed all re-use code. All created elements (buttons, dialog boxes, etc..) are now new, never re-used
+//               Added addElement( )
+//               V1.4d
+//               Modified addElement( ) to add id and classlist if supplied
+//               V1.4e
+//               Fixed textArea on multiple and subsequent uses
+//               Made overlapping dialog boxes accessible with :hover & z-index
+//               V1.4f
+//
+
+
+
+
 //
 //  NEEDS/REQURIES/USES:
 //    Mostly Standalone (so far)
 //
 
 
-var DialogBoxJsVersion = "1.3";
+var DialogBoxJsVersion = "1.4f";
+// Set the stylesheet for dialog boxes at initialization
+setDialogboxStyelsheet( );
 
 
 //
@@ -36,9 +64,10 @@ var DialogBoxJsVersion = "1.3";
 // DialogOk( titleStr, msgText, x, y, callbackFunction = null )
 // DialogMenu( titleStr, menuStrs, x, y, callbackFunction = null )
 // DialogActions( titleStr, actions, x, y )
+// addElement( type="div", {parent=null, id=null, classList=null} )
 // makeDOMId( name, suffix = "ID" )
 // createTextArea( parentElement )
-// createButton( parentElement, txt, x = 0, y = 0, isMenu = false )
+// createButton( parentElement, txt, isMenu = false )
 // createActionButton( parentElement, txt, action, isMenu = false )
 // constrainDialogPosition( dialogElement )
 // createDialogBox( titleStr, msgText, x = null, y = null )
@@ -46,6 +75,8 @@ var DialogBoxJsVersion = "1.3";
 // closeDialogBox2( event )
 // createSlider( label, min, max, x = null, y = null, callback = null )
 // DialogHistory1( titleStr, current, history, x, y, callbackFunction = null )
+// cssColorDefaults( )
+// setDialogboxStyelsheet( )
 
 
 
@@ -126,39 +157,26 @@ function DialogInventory( viewPort, board, playerInventory ) {
 // Returns canvas context (NOT the <canvas> element)
 //
 function createCanvas( parentElement, title, w, h ) {
-  // Make it so we have different ID's for each canvas that gets added to a dialogBox, but reuse them subsequent incarnations
-  let canvasID = makeDOMId( title, "CanvasID" );
-  // Attempt to get the <div> that we may have previously created
-  let element = document.getElementById( canvasID );
-
-  // Create this <canvas> if we haven't previously
-  if( !element ) {
-    element = document.createElement("canvas");
-    element.id = canvasID;
-
-    // Position it
-    element.style.marginBottom = "30px";
-  }
-
-  // Create container for Title and Canvas, so they go in one grid area
-  let area = document.createElement("div");
-  parentElement.appendChild(area);
+  let canvasElement;
+  let titleElement;
+  let area = addElement( "div", {parent:parentElement} );  // Container for Title and Canvas, so they go in one grid area
 
   // Create a title
-  let titEl = document.createElement("div");
-  area.appendChild(titEl);
-  titEl.innerText = title;
+  addElement( "div", {parent:area} ).innerText = title;
 
   // insert canvas into page DOM, associated to our dialog box <div>
-  area.appendChild(element);
+  canvasElement = addElement( "canvas", {parent:area} );
+
+  // Position it
+  canvasElement.style.marginBottom = "30px";
 
   // Set size. NOTE: Both element.style and canvas must be same size or we will get scaling
-  element.width = w;
-  element.style.width = w+"px";
-  element.height = h;
-  element.style.height = h+"px";
+  canvasElement.width = w;
+  canvasElement.style.width = w+"px";
+  canvasElement.height = h;
+  canvasElement.style.height = h+"px";
 
-  return element.getContext("2d");
+  return canvasElement.getContext("2d");
 }
 
 
@@ -171,14 +189,16 @@ function DialogYesNo( titleStr, msgText, x, y, callbackFunction = null ) {
   let msgBoxElement = createDialogBox( titleStr, msgText, x, y );
 
   // Create "yes" and "no" buttons
-  let buttonTwo = createButton( msgBoxElement, "no", msgBoxElement.style.left, msgBoxElement.style.top );
-  let buttonOne = createButton( msgBoxElement, "yes", msgBoxElement.style.left, msgBoxElement.style.top );
+  let buttonTwo = createButton( msgBoxElement, "No" );
+  let buttonOne = createButton( msgBoxElement, "Yes" );
 
   constrainDialogPosition( msgBoxElement );
 
   msgBoxElement.onclick = event => {
-    if( callbackFunction ) callbackFunction(event.target==buttonOne ? "yes" : "no");
-    msgBoxElement.style.display = "none";
+    if( event.target.tagName == "BUTTON" ) {
+      if( callbackFunction ) callbackFunction(event.target.innerText);
+      msgBoxElement.style.display = "none";
+    }
   };
 }
 
@@ -193,7 +213,7 @@ function DialogOk( titleStr, msgText, x, y, callbackFunction = null ) {
   let msgBoxElement = createDialogBox( titleStr, msgText, Math.abs(x), Math.abs(y) );
 
   // Create "Ok" button
-  createButton( msgBoxElement, "Ok", msgBoxElement.style.left, msgBoxElement.style.top ).onclick = event => {
+  createButton( msgBoxElement, "Ok" ).onclick = event => {
     if( callbackFunction ) callbackFunction("ok");
     msgBoxElement.style.display = "none";
   };
@@ -206,12 +226,6 @@ function DialogOk( titleStr, msgText, x, y, callbackFunction = null ) {
   if( y < 0 ) msgBoxElement.style.top = Math.abs(y) - parseInt(msgBoxElement.clientHeight)  +"px";
 
   constrainDialogPosition( msgBoxElement );
-
-  // Override the .onclick() in createDialogBox() so the dialog box does NOT go away when we click on it
-  msgBoxElement.onclick = event => {
-    // if( callbackFunction ) callbackFunction("ok");
-    // msgBoxElement.style.display = "none";
-  };
 }
 
 
@@ -228,17 +242,22 @@ function DialogMenu( titleStr, menuStrs, x, y, callbackFunction = null ) {
   // Build the main part of the dialog box
   let msgBoxElement = createDialogBox( titleStr, "", x, y );
 
+  let clickContainer = document.createElement( "div" );
+  msgBoxElement.appendChild( clickContainer );
+
   // Create a button for each menu item.
   for( nextButton = 0; nextButton < menuStrs.length; ++nextButton ) {
     if( menuStrs[nextButton] ) {
-      buttons[nextButton] = createButton( msgBoxElement, menuStrs[nextButton], msgBoxElement.style.left, msgBoxElement.style.top, true );
+      buttons[nextButton] = createButton( clickContainer, menuStrs[nextButton], true );
+      buttons[nextButton].style.minWidth = "5rem";  // Match the custom button's minimum size
     }
     else {
       // If an empty string "" ,then create a "[CREATE/ADD]" Button with sibling edit box for user to enter text
-      let container = document.createElement( "div" );
+      let customButtonContainer = document.createElement( "div" );
 
       // The Button
-      buttons[nextButton] = createButton( container, "[CREATE]", 1, 1 ); // x,y of 0,0 moves it out of view in the <div>!!!
+      buttons[nextButton] = createButton( customButtonContainer, "[CREATE]" ); // x,y of 0,0 moves it out of view in the <div>!!!
+      buttons[nextButton].style.minWidth = "5rem";  // Keep custom button's size from changing a lot
 
       // The Input Text Edit box
       let editBox = document.createElement( "input" );
@@ -246,15 +265,14 @@ function DialogMenu( titleStr, menuStrs, x, y, callbackFunction = null ) {
       editBox.style.marginLeft = "4px";  // Style it
       editBox.style.boxShadow = "2px 2px 2px gray";
       editBox.placeholder = "New User Name";
-      editBox.onclick = event => event.stopPropagation(); // Prevent click from getting to dialogBox and closing it
       editBox.oninput = event => {
         let siblingButton = event.target.parentElement.firstChild;
         siblingButton.innerText = event.target.value;
       }
-      container.appendChild( editBox );
+      customButtonContainer.appendChild( editBox );
 
       // Add it all to the dialog box
-      msgBoxElement.appendChild( container );
+      clickContainer.appendChild( customButtonContainer );
 
       // Place the cursor in the edit box by default
       editBox.focus();
@@ -263,14 +281,26 @@ function DialogMenu( titleStr, menuStrs, x, y, callbackFunction = null ) {
 
   constrainDialogPosition( msgBoxElement );
 
-  // Close dialog box on mouse click
-  msgBoxElement.onclick = event => {
-    // If dialog box or title string was clicked on to close/cancel OR the unmodified "[CREATE]" button was clicked, then return nothing; Else return text of button clicked on
-    let returnString;
-    if( (event.target == msgBoxElement) || event.target.classList.contains("DlgTitle") || (event.target.innerText == "[CREATE]") ) returnString = "";
-    else returnString = event.target.innerText;
+  // Handle button click by closing dialog box and returning the button's string
+  clickContainer.onclick = event => {
+    // If the unmodified "[CREATE]" button was clicked, then return nothing; Else return text of button clicked on
+    let returnString = null;
 
-    if( callbackFunction ) callbackFunction(returnString);
+    if( event.target.tagName == "BUTTON" ) {
+      returnString = event.target.innerText;
+      if( returnString == "[CREATE]" ) returnString = "";
+
+      // A button was clicked (i.e. NOT the custom button input edit box), so we are out of here
+      if( callbackFunction ) callbackFunction(returnString);
+      msgBoxElement.style.display = "none";
+    }
+  };
+
+  // Close dialog box on mouse click
+  let closeButton = msgBoxElement.querySelector(".DlgClose button");
+  closeButton.onclick = event => {
+    // just return an empty string ""
+    if( callbackFunction ) callbackFunction("");
     msgBoxElement.style.display = "none";
   };
 }
@@ -308,12 +338,25 @@ function DialogActions( titleStr, actions, x, y ) {
 
 
 //
-// Creates a DOM Element ID by sanitizing the name string, appending the suffix, and prepending __ (double underscore)
+//  Adds an empty element to the DOM body or specified parent element, of type <type>
 //
-// Replaces invalid ID characters with _ (underscore)
+//  type is "dialog", "div", "button", etc...
+//  id is the ID to use when looking for or creating the element
 //
-function makeDOMId( name, suffix = "ID" ) {
-  return "__" + name.replace( /[\[\]!@#$%^&\*\(\)]/g, "_" ) + suffix;
+//  Also set id and classlist if specified
+//
+//  Returns the <> element
+//
+function addElement( type="div", {parent=null, id=null, classList=null} = {} ) {
+  let element = document.createElement( type ); // i.e. "dialog", "div", "button", etc...
+
+  if( parent ) parent.appendChild( element );         // Add element to the specified parent element
+  else document.body.appendChild( element );          // Add element the <body>
+
+  if( id ) element.id = id;
+  if( classList ) element.classList.add( classList );
+
+  return element;
 }
 
 
@@ -323,41 +366,25 @@ function makeDOMId( name, suffix = "ID" ) {
 //
 // Returns textArea (the <textarea> element), so calling function can make it go away, etc...
 //
-function createTextArea( parentElement ) {
-  let textAreaID = "__TextAreaID";
-  // Attempt to get the <div> that we may have previously created
-  let textArea = document.getElementById( textAreaID );
+function createTextArea( parentElement, txt = "" ) {
+  // Haven't previously created the <textarea>, so create it now and set it up
+  textArea = document.createElement("textarea");
 
-  if( textArea ) {
-      // We have previously created/used this, so just make <textarea> visible again
-      textArea.style.display = "inline-block";
-  }
-  else {
-    // Haven't previously created the <textarea>, so create it now and set it up
-    textArea = document.createElement("textarea");
+  // Position it
+  textArea.style.position = "relative";
 
-    textArea.id = textAreaID;
+  // Style it
+  textArea.style.margin = "2px";
 
-    // Position it
-    textArea.style.position = "relative";
+  // Size it (# of text cols and rows)
+  textArea.cols = 60;
+  textArea.rows = 10;
 
-    // Style it
-    textArea.style.margin = "2px";
-
-    // Size it (# of text cols and rows)
-    textArea.cols = 60;
-    textArea.rows = 10;
-
-    // insert textArea into page DOM, associated to our dialog box <div>
-    parentElement.appendChild(textArea);
-  }
+  // insert textArea into page DOM, associated to our dialog box <div>
+  parentElement.appendChild(textArea);
 
   // Set new text
-  textArea.innerText = "This is a TEST of the emergency dialog system :-)";
-
-  textArea.onclick = event => {
-    event.stopPropagation(); // Don't let the click get up to the dialogBox, which would use it to close the dialogBox
-  };
+  textArea.innerText = txt;
 
   return textArea;
 }
@@ -369,40 +396,17 @@ function createTextArea( parentElement ) {
 //
 // Returns button (the <button> element), so calling function can make it go away, etc...
 //
-// Location (upper left corner) defaults (if x and y are 0) to 33% of dialog <div> size
-function createButton( parentElement, txt, x = null, y = null, isMenu = false ) {
-  // Make it so we have different ID's for "yes", "no", "ok", "cancel", etc... buttons
-  let buttonID = makeDOMId( txt, "_ButtonID" );
-  // Attempt to get the <div> that we may have previously created
-  let button = document.getElementById( buttonID );
-  if( x === null ) x = window.innerWidth / 3;
-  if( y === null ) y = window.innerHeight / 3;
+function createButton( parentElement, txt, isMenu = false ) {
+  let button = addElement( "button", {parent:parentElement} );
 
-  if( button ) {
-      // We have previously created/used this, so just make <button> visible again
-      button.style.display = "inline";
-  }
-  else {
-    // Haven't previously created the <button>, so create it now and set it up
-    button = document.createElement("button");
-
-    button.id = buttonID;
-
-    button.style.position = "relative";
-
-    button.style.margin = "2px";
-    button.style.cursor = "pointer";
-  }
-
-  // insert button into page DOM, associated to our dialog box <div>
-  parentElement.appendChild(button);
-
-  // Set new position
-  button.style.left = x +"px";
-  button.style.top = y +"px";
-
-  // Set new text
   button.innerText = txt;
+
+  // Position it
+  button.style.position = "relative";
+
+  // Style it
+  button.style.margin = "2px";
+  button.style.cursor = "pointer";
 
   if( isMenu )  button.style.display = "block";
 
@@ -418,41 +422,22 @@ function createButton( parentElement, txt, x = null, y = null, isMenu = false ) 
 // Associate the button with an action (a function passed in by the caller)
 //
 function createActionButton( parentElement, txt, action, isMenu = false ) {
-  // Make it so we have different ID's for "yes", "no", "ok", "cancel", etc... buttons
-  let buttonID = makeDOMId( txt, "_ButtonID" );
-  // Attempt to get the <div> that we may have previously created
-  let button = document.getElementById( buttonID );
+  // Haven't previously created the <button>, so create it now and set it up
+  let button = addElement( "button", {parent:parentElement} );
 
-  if( button ) {
-      // We have previously created/used this, so just make <button> visible again
-      button.style.display = "inline";
-  }
-  else {
-    // Haven't previously created the <button>, so create it now and set it up
-    button = document.createElement("button");
-
-    button.id = buttonID;
-
-    // Position it
-    button.style.position = "relative";
-
-    // Style it
-    button.style.margin = "2px";
-    button.style.backgroundColor = "orange";
-    button.style.cursor = "pointer";
-  }
-
-  // insert button into page DOM, associated to our dialog box <div>
-  parentElement.appendChild(button);
-
-  // Set new text
   button.innerText = txt;
+
+  // Position it
+  button.style.position = "relative";
+
+  // Style it
+  button.style.margin = "2px";
+  button.style.backgroundColor = "orange";
+  button.style.cursor = "pointer";
 
   if( isMenu )  button.style.display = "block";
 
   button.onclick = event => {
-    event.stopPropagation(); // Don't let the click get up to the dialogBox, which would use it to close the dialogBox
-
     action(); // Call the users action code
   };
 
@@ -483,58 +468,29 @@ function constrainDialogPosition( dialogElement ) {
 //
 // Returns msgBox (the <div> element), so other functions can put buttons on it, etc...
 //
-// Location (upper left corner) defaults (if x and y are null) to 33% of window size
+// Location defaults to 10px from left and 1/3 down from top (i.e. if x and y are null)
 //
-function createDialogBox( titleStr, msgText, x = null, y = null ) {
-  let dlgID = makeDOMId( titleStr, "_DlgID" );
+function createDialogBox( titleStr, msgText, x = 10, y = window.innerHeight / 3 ) {
+  let msgBox = addElement( "div", {classList:"Dialog"} );
 
-  // Attempt to get the <div> that we may have previously created
-  let msgBox = document.getElementById( dlgID );
-  if( x == null ) x = window.innerWidth / 3;
-  if( y == null ) y = window.innerHeight / 3;
+  // Position it
+  msgBox.style.position = "absolute";
 
-  if( msgBox ) {
-    // We have previously created/used this, so just make <div> visible again
-    msgBox.style.display = "block";
+  // Style the <div> into a box
+  msgBox.style.border = "2px solid gray";
+  msgBox.style.boxShadow = "3px 3px 2px #777777";
+  msgBox.style.padding = "10px 10px 10px 4px"; // -bottom is 4px; So ::after content stays close to bottom
+  msgBox.style.backgroundColor = "#ffffff"+"dd";  // Include some transparency
+  msgBox.style.borderRadius = "8px";
+  msgBox.style.color = "darkgray";
 
-    // Clear old HTML (i.e. buttons)
-    msgBox.innerHTML = "";
-  }
-  else {
-    // Haven't previously created the <div>, so create it now and set it up
-    msgBox = document.createElement("div");
-
-    msgBox.id = dlgID;
-
-    // Position it
-    msgBox.style.position = "absolute";
-
-    // Style the <div> into a box
-    msgBox.style.border = "2px solid gray";
-    msgBox.style.boxShadow = "3px 3px 2px #777777";
-    msgBox.style.padding = "10px 10px 10px 4px"; // -bottom is 4px; So ::after content stays close to bottom
-    msgBox.style.backgroundColor = "#ffffff"+"dd";  // Include some transparency
-    msgBox.style.borderRadius = "8px";
-    msgBox.style.color = "#darkgray";
-
-    // insert msgBox into page DOM
-    document.body.appendChild(msgBox);
-
-    // Hide dialog by clicking on it
-    // The createActionButton() stopPropagation, so this event only gets fired if user clicks on background of dialogBox
-    // NOTE: Some dialog box wrappers to this funciton, will overright the .onclick. Nothing wrong with that.
-    msgBox.onclick = event => {
-      msgBox.style.display = "none";
-    };
-
-    // Hide dialog by pressing ESC
-    // NOTE: Must call event.preventDefault() from the mouse event handler that got us here (if any), so we don't lose focus
-    msgBox.tabIndex = 0; // Set .tabIndex so that .focus() works
-    msgBox.focus();
-    msgBox.onkeydown = event => {
-      if( event.key == "Escape" ) msgBox.style.display = "none";
-    };
-  }
+  // Hide dialog by pressing ESC
+  // NOTE: Must call event.preventDefault() from the mouse event handler that got us here (if any), so we don't lose focus
+  msgBox.tabIndex = 0; // Set .tabIndex so that .focus() works
+  msgBox.focus();
+  msgBox.onkeydown = event => {
+    if( event.key == "Escape" ) msgBox.style.display = "none";
+  };
 
   // Set new position
   msgBox.style.left = x +"px";
@@ -543,9 +499,9 @@ function createDialogBox( titleStr, msgText, x = null, y = null ) {
   // Set new text. Uppercase the titleStr
   msgBox.innerHTML = `<span class="DlgClose"></span> <span class="DlgTitle">${titleStr.toUpperCase()}</span> <hr> ${msgText} <br>`;
 
-  // Create "Close" button
-  let titleElement = msgBox.querySelector(".DlgClose");
-  let closeButtonElement = createButton( titleElement, "Close", 0, 0 );
+  // Create "Close" button (i.e. Hide dialog by clicking on button)
+  let containerElement = msgBox.querySelector(".DlgClose");
+  let closeButtonElement = createButton( containerElement, "Close" );
   closeButtonElement.onclick = event => {
     msgBox.style.display = "none";
   };
@@ -566,46 +522,35 @@ function createDialogBox( titleStr, msgText, x = null, y = null ) {
 // Location defaults to centered horizontally and/or vertically in parent, if x and/or y are null
 //
 function createDialogBox2( titleStr, msgText, x = null, y = null ) {
-  let dlgID = makeDOMId( titleStr, "_DlgID" );
-  // Attempt to get the <div> that we may have previously created
-  let msgBox = document.getElementById( dlgID );
-
-  // Create a <dialog> if a previous call hasn't already (i.e. reuse old dialog box)
-  if( !msgBox ) {
-    msgBox = document.createElement("dialog");
-    msgBox.id = dlgID;
-
-    msgBox.classList.add( "DlgDialogBox" );     // Add a class so .css will style it
-
-    document.body.appendChild(msgBox);          // insert msgBox into page DOM
-  }
+  let msgBox = addElement("dialog", {classList:DlgDialogBox});  // Include a class so .css can style it
 
   // Set new position, either with specified x,y or centered in parent
-  if( x == null ) {
-    msgBox.style.left = "50%";  // Move corner of dialog to center of screen
-    msgBox.style.transform = "translateX(-50%)"; // Move by half the dialog size
+  if( options.x == null ) {
+    dlgBox.style.left = "50%";  // Move corner of dialog to center of screen
+    dlgBox.style.transform += "translateX(-50%)"; // Move X by half the dialog size
   }
-  else msgBox.style.left = x +"px";
-  if( y == null ) {
-    msgBox.style.top = "50%";  // Move corner of dialog to center of screen
-    msgBox.style.transform = "translateY(-50%)"; // Move by half the dialog size
+  else dlgBox.style.left = options.x +"px";
+  if( options.y == null ) {
+      dlgBox.style.top = "50%";  // Move corner of dialog to center of screen
+      dlgBox.style.transform += "translateY(-50%)"; // Move Y by half the dialog size
   }
-  else msgBox.style.top = y +"px";
+  else dlgBox.style.top = options.y +"px";
 
   // Set new text. Uppercase the titleStr
-  msgBox.innerHTML = '<div class="DlgHeader">' +
-    '<span class="DlgTitle">' + titleStr.toUpperCase() + '</span>' +
-    // Create a close [X] button
-     '<button class="DlgCloseButton" onclick="closeDialogBox2(event)">&times</button>' +
-     '<hr></div>' +
-     '<span>' + msgText + '</span><br>' +
-     '<div class="DlgContent">' + '</div>';
+  msgBox.innerHTML = `
+    <div class="DlgHeader">
+      <span class="DlgTitle"> ${titleStr.toUpperCase()}</span>
+      <button class="DlgCloseButton" onclick="closeDialogBox2(event)">&times</button>
+      <hr>
+    </div>
+    <span> ${msgText} </span><br>
+    <div class="DlgContent"> </div>
+  `;
 
   msgBox.show( );  // Display the dialog box
 
   return msgBox;
 }
-
 
 //
 // ONLY for closing <dialog> based dialog boxes
@@ -622,42 +567,17 @@ function closeDialogBox2(event) {
 //
 // Location (upper left corner) defaults (if x and y are null) to 33% of window size
 //
-function createSlider( label, min, max, x = null, y = null, callback = null ) {
-  // Make it so we have different ID's for "yes", "no", "ok", "cancel", etc... buttons
-  let elementID = makeDOMId( label, "_ElementID" );
-  let labelElementID = "label"+elementID;
-  // Attempt to get the element that we may have previously created
-  let element = document.getElementById( elementID );
-  let labelElement = document.getElementById( labelElementID );
+function createSlider( label, min, max, x = window.innerWidth / 3, y = window.innerHeight / 3, callback = null ) {
+  let element = addElement( "input" );
+  let labelElement = addElement( "label" );
 
-  if( x==null ) x = window.innerWidth / 3;
-  if( y==null ) y = window.innerHeight / 3;
+  // Position it
+  element.style.position = "absolute";
+  // element.style.position = "relative";
+  labelElement.style.position = "absolute";
 
-  if( element ) {
-      // We have previously created/used this, so just make control visible again
-      element.style.display = "inline";
-      labelElement.style.display = "inline";
-  }
-  else {
-    // Haven't previously created the control, so create it now and set it up
-    element = document.createElement("input");
-    labelElement = document.createElement("label");
-
-    element.id = elementID;
-    labelElement.id = labelElementID;
-
-    // Position it
-    element.style.position = "absolute";
-    // element.style.position = "relative";
-    labelElement.style.position = "absolute";
-
-    // Set the text for the label
-    labelElement.innerText = label;
-
-    // insert element into page DOM, associated to our dialog box <div>
-    document.body.appendChild(element);
-    document.body.appendChild(labelElement);
-  }
+  // Set the text for the label
+  labelElement.innerText = label;
 
   // Set new position
   element.style.left = x +"px";
@@ -717,7 +637,7 @@ function DialogHistory1( titleStr, current, history, x, y, callbackFunction = nu
     htmlStr  += "<br>";
 
 
-//    buttons[nextButton] = createButton( msgBoxElement, columns[nextButton], msgBoxElement.style.left, msgBoxElement.style.top, true );
+//    buttons[nextButton] = createButton( msgBoxElement, columns[nextButton], true );
   }
 
   msgBoxElement.innerHTML = htmlStr;
@@ -729,6 +649,138 @@ function DialogHistory1( titleStr, current, history, x, y, callbackFunction = nu
     msgBoxElement.style.display = "none";
   };
 }
+
+
+//
+// If the css color variables that the DialogBox css stylesheet uses, are not defined, then define them
+//
+function cssColorDefaults( ) {
+  let allStyles = getComputedStyle( document.documentElement ); // Neccessary for values from .css file
+  let dark = allStyles.getPropertyValue( '--DarkestColor' );
+  let normal = allStyles.getPropertyValue( '--NormalColor' );
+  let light = allStyles.getPropertyValue( '--LightColor' );
+  let harley = allStyles.getPropertyValue( '--HarleyOrange' );
+
+
+  if( !dark )  document.documentElement.style.setProperty( '--DarkestColor', "black" );
+  if( !normal )  document.documentElement.style.setProperty( '--NormalColor', "gray" );
+  if( !light )  document.documentElement.style.setProperty( '--LightColor', "white" ); // "beige" );
+  if( !harley )  document.documentElement.style.setProperty( '--HarleyOrange', "orange" );
+}
+
+
+function setDialogboxStyelsheet( ) {
+  cssColorDefaults( );
+
+  cssStylesheet( "DialogBox", `
+    /*
+     * DIALOG BOX CLASSES
+     */
+     /*
+      *   Add class of DlgInput to anything you want clickable and to allow it to return a value
+      *
+      *      class DlgDialogBox
+      *  --------------------------
+      *  |  TITLE   ......... O X |  Class DlgTitle {grid, grid-template-columns: max-content 1fr}
+      *  |------------------------|
+      *  | TBL TBL        TBR TBR |  Class DlgButtons {grid, grid-template-columns: 1fr max-content}, DlgButtonsLeft, DlgButtonsRight
+      *  |------------------------|
+      *  |   HEADER HD HD .....   |  Class DlgHeader {grid, repeat( auto-fit, minmax( 5rem, 1fr) )}
+      *  |------------------------|
+      *  |                        |  Class DlgBody
+      *  |   BODY BD BD ...       |          Class DlgLine {grid, repeat( auto-fit, minmax( 5rem, 1fr) )}
+      *  |   BODY BD BD ...       |
+      *  |                        |
+      *  |------------------------|
+      *  | BBL BBL         BR BBR |  Class DlgButtons {grid, grid-template-columns: 1fr max-content}, DlgButtonsLeft, DlgButtonsRight
+      *  |------------------------|
+      */
+    .DlgDialogBox {
+      position: absolute; /* <dialog> doesn't need this for some reason, but if we use a <div> for the DialogBox base element, then we do  */
+      padding: 4px;
+      border: solid 1px black;
+      border-radius: 8px;
+      background-image: linear-gradient(var(--NormalColor),var(--LightColor),var(--NormalColor));
+    }
+    .DlgDialogBox:hover {
+      border: solid 1px rgba(100, 100, 0, 0.9);
+      z-index: 10;
+    }
+
+    .DlgTitle {
+      box-shadow: 3px 3px 5px var(--DarkestColor);
+      margin-bottom: 4px;
+      padding-left: 0.25rem;
+      width: 100%;
+
+      display: grid;
+      /*                      title       [fullscreen box       eXit] */
+      grid-template-columns:   1fr    max-content;
+    }
+    .DlgTitle h2 {
+      margin-right: 2rem;
+    }
+    .DlgTitle button, .DlgTitle .DlgButton {
+      min-width: 1.6rem;
+    }
+
+    .DlgMenus, .DlgButtons {
+      background-color: var(--NormalColor);
+      border-bottom: solid 2px var(--DarkestColor);
+      border-radius: 4px;
+
+      display: grid;
+      grid-template-columns: 1fr max-content;
+    }
+
+    .DlgMenu {
+      display: inline; /* Incase someone uses a <div> as appose to a <span> */
+      margin-left: 10px;
+      padding: 0px 2px;
+
+      border-radius: 2px;
+      box-shadow: 1px 2px 4px black;
+
+      cursor: pointer;
+    }
+    .DlgMenu:hover {
+      /* Don't use "border", it changes the size of the element */
+      outline: solid 1px var(--LightColor);
+    }
+    .DlgMenu:active {
+      /* Don't use "border", it changes the size of the element */
+      outline: ridge 4px var(--LightColor);
+    }
+
+    .DlgHeader {
+      border-bottom: solid 1px var(--HarleyOrange);
+
+      display: grid;
+      grid-template-columns: repeat( auto-fit, minmax( 5rem, 1fr) );
+    }
+
+    .DlgBody {
+      border: solid 1px var(--DarkestColor);
+      border-radius: 4px;
+      box-shadow: inset -2px -2px 3px var(--DarkestColor);
+
+      max-width: 100%;  /* Don't let huge content let it get bigger than the dialog box */
+      min-height: 4rem;
+
+      margin: 0.3rem 0rem;
+      padding: 0.25rem;
+    }
+    .DlgBody img {
+      max-width: 100%; /* Don't let huge images go to full size */
+    }
+
+    .DlgInput {
+      cursor: pointer;
+    }
+  ` );
+}
+
+
 
 
 

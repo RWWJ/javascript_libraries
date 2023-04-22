@@ -33,9 +33,16 @@
 //               V1.7a
 //               Added toDataURL(), strokeArc() strokeEllipse() and strokeOval(). Changed .arc() to NOT draw the path
 //               V1.7b
+//  13 Dec 2022  Started adding animateQue, addObj(), delObj(), clearObjs(), _moveObjs(), _drawObjs()
+//  14 Dec 2022  Added toColorString( ) to convert a number to a css color.
+//               Modified all the color code to use the new toColorString( )
+//               Fixed set color(), it was not setting the .canvas fillStyle or strokeStyle correctly
+//               V1.8
+//  18 Apr 2023  Added putImageData(), getImageData( ), createImageData()
+//               V1.9
 
 
-var CanvasJsVersion = "1.7b";
+var CanvasJsVersion = "1.9";
 
 
 //   METHODS
@@ -46,6 +53,7 @@ var CanvasJsVersion = "1.7b";
 //  onResize( event )
 //  save( )
 //  restore( )
+//  toColorString( color )
 //  set color( color )
 //  get color( )
 //  set strokeStyle( color )
@@ -96,11 +104,13 @@ var CanvasJsVersion = "1.7b";
 //  get textAlign( )
 //  set textBaseline( how )
 //  get textBaseline( )
-//  drawImage( img, x1, y1, w1, h1, x2, y2, w2, h2 )
 //  image( img, x1, y1, w1, h1, x2, y2, w2, h2 )
+//  drawImage( img, x1, y1, w1, h1, x2, y2, w2, h2 )
 //  imageRotate( img, x1, y1, w1, h1, x2, y2, w2, h2, angleDeg = 0 )
 //  drawImageRotate( img, x1, y1, w1, h1, x2, y2, w2, h2, angleDeg = 0 )
-//  drawImage( img, x1, y1, w1, h1, x2, y2, w2, h2 )
+//  getImageData( srcX, srcY, srcW, srcH )
+//  putImageData( imageData, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight )
+//  createImageData( width, height )
 //  toDataURL( mimeType = "image/png" )
 //  bezierCurveTo( ctlX1, ctlY1, ctlX2, ctlyY2, x, y )
 //  isPointInPath( x, y )
@@ -108,6 +118,12 @@ var CanvasJsVersion = "1.7b";
 //  boxShadow( offsetX, offsetY, blurRadius, color )
 //  dropShadow( offsetX, offsetY, blurRadius, color )
 //  static radians( degrees )
+//  addObj( move, draw, fps )
+//  delObj( objId )
+//  clearObjs( )
+//  _moveObjs( ms )
+//  _drawObjs( )
+//  _animate( ms )
 
 
 class Canvas {
@@ -119,11 +135,13 @@ class Canvas {
   //   element  --- A <div> element, we will create a <canvas>, appended to the <div>
   //
   constructor( container = "" ) {
-    if( container === "" ) {
-      container = document.body.appendChild( document.createElement( "div" ) );
-    }
-    else if( typeof container === "string" ) {
-      container = document.body.appendChild( document.getElementById( container ) );
+    const MinHeight = 600;
+
+    if( container === "" )  container = document.body.appendChild( document.createElement( "section" ) );
+    else if( typeof container === "string" ) container = document.body.appendChild( document.getElementById( container ) );
+    if( !container.offsetHeight ) {
+      console.error( `ContentArea div has no height, so canvas would have 0px height! Forcing it to ${MinHeight}` );
+      container.style.height = MinHeight+"px";  // The section defaults to 0px high, which will make our canvas 0px as well
     }
     this.containerElement = container;
     this.canvasElement = document.createElement( "canvas" );
@@ -151,7 +169,11 @@ class Canvas {
     // NOTE: Must either use .bind(this) or a arrow function
     this.canvas.canvas.onmousedown = this.onMouseDown.bind(this);      // Example with bind
     this.canvas.canvas.onmousemove = event => this.onMouseMove(event); // Example with arrow function
-  }
+
+    this._animateQue = []; // [{move:function, draw:function, fps:60, elapsedSec}, {}, ...]
+    this._previousMs = performance.now();
+    this._animate( this._previousMs );
+  } // END constructor
 
 
   //
@@ -205,11 +227,23 @@ class Canvas {
   }
 
 
+  //
+  // If color is a number, then convert it to standard css hex string (#000000)
+  // Otherwise, return unchanged
+  //
+  static toColorString( color ) {
+    // .floor() to deal with floats
+    if( typeof color == "number" ) {
+      console.log( `color: ${color}, ${"#" + Math.floor(color).toString(16)}`);
+      color = "#" + Math.floor(color).toString(16);
+    }
+
+    return color;
+  }
+
   set color( color ) {
-    this.strokeColor = color;
-    this.fillColor = color;
-    this.canvas.strokeColor = color;
-    this.fillColor = color;
+    this.strokeStyle = color;
+    this.fillStyle = color;
 
     return color;
   }
@@ -224,6 +258,8 @@ class Canvas {
   // For canvas naming consistency
   //
   set strokeStyle( color ) {
+    color = Canvas.toColorString( color );
+
     this.canvas.strokeStyle = color;
 
     return this.strokeColor = color;
@@ -239,6 +275,8 @@ class Canvas {
   // For canvas naming consistency
   //
   set fillStyle( color ) {
+    color = Canvas.toColorString( color );
+
     this.canvas.fillStyle = color;
 
     return this.fillColor = color;
@@ -390,7 +428,7 @@ class Canvas {
 
 
   line( sx, sy, dx, dy, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath( );
     this.canvas.moveTo( sx, sy );
     this.canvas.lineTo( dx, dy );
@@ -435,7 +473,7 @@ class Canvas {
   // Does not effect path
   //
   strokeRect( x, y, w, h, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.strokeRect( x, y, w, h );
 
     this.canvas.strokeStyle = this.strokeColor; // Restore strokeStyle
@@ -445,7 +483,7 @@ class Canvas {
 
 
   fillRect( x, y, w, h, color = this.fillColor ) {
-    this.canvas.fillStyle = color;
+    this.canvas.fillStyle = Canvas.toColorString( color );
     this.canvas.fillRect( x, y, w, h );
 
     this.canvas.fillStyle = this.fillColor; // Restore fillStyle
@@ -461,7 +499,7 @@ class Canvas {
     let x2 = x1 + w - 1;
     let y2 = y1 + h -1;
 
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath( );
     this.canvas.moveTo( x1, y2 - r );  // Start at radius distance from Bottom left
 
@@ -501,7 +539,7 @@ class Canvas {
 
 
   strokeArc( cx, cy, r, deg1, deg2, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath( );
     this.canvas.arc( cx, cy, r, Canvas.radians(deg1), Canvas.radians(deg2) );
     this.canvas.stroke( );
@@ -513,7 +551,7 @@ class Canvas {
 
 
   circle( cx, cy, r, color = this.strokeColor ) {
-    this.strokeStyle = color;
+    this.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath( );
     this.canvas.arc( cx, cy, r, 0, Math.PI * 2, color );
     this.canvas.stroke( );
@@ -532,8 +570,9 @@ class Canvas {
   }
 
 
+
   fillCircle( cx, cy, r, color = this.fillColor ) {
-    this.canvas.fillStyle = color;
+    this.canvas.fillStyle = Canvas.toColorString( color );
     this.canvas.beginPath( );
     this.canvas.arc( cx, cy, r, 0, Math.PI * 2 );
     this.canvas.fill( );
@@ -558,7 +597,7 @@ class Canvas {
   // Draw a full (closed) oval/elipse
   //
   strokeOval( x, y, radiusX, radiusY, rotationDeg=0, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath();
     this.ellipse( x, y, radiusX, radiusY, rotationDeg, 0, 360 );
     this.canvas.stroke();
@@ -591,7 +630,7 @@ class Canvas {
   //
   strokeEllipse( x, y, radiusX, radiusY, rotationDeg=0, startAngle=0, endAngle=360,
         counterclockwise = false, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.beginPath();
     this.canvas.ellipse( x, y, radiusX, radiusY, Canvas.radians(rotationDeg),
       Canvas.radians(startAngle), Canvas.radians(endAngle), counterclockwise );
@@ -617,7 +656,7 @@ class Canvas {
 
 
   strokeText( text, x, y, color = this.strokeColor ) {
-    this.canvas.strokeStyle = color;
+    this.canvas.strokeStyle = Canvas.toColorString( color );
     this.canvas.strokeText( text, x, y );
 
     this.canvas.strokeStyle = this.strokeColor; // Restore strokeStyle
@@ -627,7 +666,7 @@ class Canvas {
 
 
   fillText( text, x, y, color = this.fillColor ) {
-    this.canvas.fillStyle = color;
+    this.canvas.fillStyle = Canvas.toColorString( color );
     this.canvas.fillText( text, x, y );
 
     this.canvas.fillStyle = this.fillColor; // Restore strokeStyle
@@ -757,6 +796,19 @@ class Canvas {
       return this;
   }
 
+  getImageData( srcX, srcY, srcW, srcH ) {
+    return this.canvas.getImageData( srcX, srcY, srcW, srcH );
+  }
+
+  putImageData( imageData, dx, dy, dirtyX=0, dirtyY=0, dirtyWidth=imageData.width, dirtyHeight=imageData.height ) {
+    this.canvas.putImageData( imageData, dx, dy, dirtyX, dirtyY, dirtyWidth, dirtyHeight );
+
+    return this;
+  }
+
+  createImageData( width, height ) {
+    return this.canvas.createImageData( width, height );
+  }
 
   //
   // Returns a dataURL of the canvas contents,
@@ -822,6 +874,67 @@ class Canvas {
   static radians( degrees ) {
     return degrees * Math.PI / 180;
   }
+
+
+  //
+  // Add move() and draw() funcitons to the que to be called via requestAnimationFrame()
+  //
+  // Returns identifier that can be used by call to delObj(id) (is actually the index into our ._animateQue[])
+  //
+  // ._animateQue = [{move:function, draw:function, fps:60, elapsedSec}, {}, ...]
+  //
+  addObj( move, draw, fps ) {
+    this._animateQue.push( {move,draw,fps,elapsedSec:0} );
+
+    return this._animateQue.length - 1;
+  }
+
+
+  delObj( objId ) {
+    this._animateQue.splice( objId, 1 );
+  }
+
+
+  clearObjs( ) {
+    this._animateQue = [];
+  }
+
+
+  _moveObjs( ms ) {
+    let deltaSecs;
+
+    for( let obj of this._animateQue ) {
+      deltaSecs = (ms - this._previousMs) / 1000;   // Seconds since last call to _moveObjs()
+      this._previousMs = ms;        // Save new previous value
+      obj.elapsedSec += deltaSecs;
+
+      if( obj.elapsedSec >= (1 / obj.fps) ) {
+        obj.elapsedSec = 0; // Start timing over
+
+        obj.move( );
+      }
+    }
+  }
+
+
+  _drawObjs( ) {
+    for( let obj of this._animateQue ) {
+      obj.draw( this );  // Pass Canvas object, or we could pass the <canvas> context (this.canvas)
+    }
+  }
+
+
+  _animate( ms ) {
+    if( !Paused ) {
+      this._moveObjs( ms );
+      this._drawObjs();
+    }
+
+    requestAnimationFrame( ms => this._animate(ms) );
+  }
+
+
+
 
 
 

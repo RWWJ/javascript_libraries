@@ -3,36 +3,45 @@
 //
 //
 
-//   FUNCTIONS
+//
+//  20 Dec 2022  Modified fullScreenButtonOnClick() to handle elements, not just the document
+//               V1.1
 //
 
 
-var FullScreenJsVersion = "1.0";
+var FullScreenJsVersion = "1.1";
 
 
 
+//   FUNCTIONS
+//
+// fullScreenButtonOnClick( event )
+//
 
+
+
+//
+// To fullscreen an element other than the document, then set a data-parent attribute with value of the
+// ID of the element to fullscreen. i.e.:
+//    <div id="SomeParentElementID"> <button data-parent="SomeParentElementID" type=button>FS</button>  <p>some content</p> </div>
+//
+// NOTE <dialog> elements can NOT be set to fullscreen, tho most other DOM elements can
+//
+// Can only enter fullscreen in response to user input (i.e. a button click)
+//
 function fullScreenButtonOnClick( event ) {
+  // See if we're already in fullscreen (i.e. document.fullscreenElement is not null)
+  if( document.fullscreenElement ) {
+    document.exitFullscreen()   // document is the only thing you can call .exitFullscreen() on
+      .catch( err => console.error(err) );  // No idea what might cause an error here
+  }
+  else {
+    let parent = document.getElementById( event.target.dataset.parent );
+    if( !parent ) parent = document.documentElement;
 
-    // Can only enter fullscreen in response to user input (i.e. a button click)
-    //
-    // If we are in fullscreen, then .fullscreenElement is the element that is fullscreen, otherwise null
-    // NOTE <dialog> elements can NOT be set to fullscreen, tho most other DOM elements can
-    if( document.fullscreenElement ) {
-      // Always call .exitFullscreen on document, regardless of which element was used for fullscreen
-      document.exitFullscreen()
-      .then( () => console.log("Document Exited from Full screen mode") )
-      .catch( err => console.error(err) );
-    }
-    else {
-      // .documentElement is the top level element of the document, i.e. the <html> that encloses the <head> and <body>
-      // Note, we can make other elements be fullscreen
-      document.documentElement.requestFullscreen();
-
-      console.log("Press <esc> to exit fullscreen");
-      // Content.innerHTML += "<br>Press <esc> to exit fullscreen<br>";
-    }
-
+    parent.requestFullscreen()      // Go fullscreen
+      .catch( err => console.error(err) );  // If for some reason we can't go fullscreen
+  }
 }
 
 

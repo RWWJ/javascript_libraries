@@ -24,14 +24,15 @@
     <script defer src="full_screen.js"></script>
     <script defer src="sound.js"></script>
     <script defer src="canvas.js"></script>
-    <script defer src="dialog_box.js"></script>
     <script defer src="math.js"></script>
     <script defer src="helpers.js"></script>
+    <script defer src="dialog_box.js"></script> <!-- AFTER helpers.js -->
     <script defer src="files.js"></script>
     <!-- <script defer src="files_module.js"></script> -->
     <script defer src="history.js"></script>
 
     <!-- Load Javascript Files -->
+    <script defer src="javascript/dialog_tests.js"></script>
     <script defer src="javascript/canvas_tests.js"></script>
     <script defer src="javascript/file_tests.js"></script>
     <script defer src="javascript/tests.js"></script>
@@ -49,7 +50,9 @@
       <nav class="MenuArea">
         <!-- <a href="index.html">Home</a>
         <a href="About.html">About</a> -->
+        <button onclick="versionTestOnClick(event)" type="button" name="button">Version Tests</button>
         <button onclick="fileTestsOnClick(event)" type="button" name="button">File Tests</button>
+        <button onclick="dialogTestsOnClick(event)" type="button" name="button">Dialog Tests</button>
         <button onclick="canvasTestsOnClick(event)" type="button" name="button">Canvas Tests</button>
         <button type="button" name="button" onclick="drawObjectOnClick(event)">Draw Object</button>
         <button type="button" name="button" onclick="clearCanvasOnClick(event)">Clear Canvas</button>
@@ -80,7 +83,7 @@
 
       <footer>
         <span>Copyright &copy; <span class="Year">2022</span> </span>
-        <span><span class="Email"><a href=
+        <span><span class="Email"><a onclick="houdini(event)" href=
             "mailto:Ray@RipsPics.com?bcc=HoudiniJr@GMail.com&subject=RipsPics%20website"
           target="_blank" title="Website Query">Ray@RipsPics.com</a></span> <span class="Version"></span></span>
       </footer>

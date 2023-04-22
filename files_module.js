@@ -123,32 +123,28 @@ function fileTestFileFunctions() {
       }},
 
       {name:"Test: fileFileOfImageTextFiles()", action:()=>{
-        let element = document.getElementById("TestAreaID");
-
         // We get a callback for every file loaded from the filelist in our specified file
         //
         fileFileOfImageTextFiles( "TestFiles/ImageList.txt", (results) => {
           // results is {image:imageElement, text:text}
-          element.innerHTML += "<h1>NEXT FILE</h1>";
-          if( results.text ) element.innerHTML += "<p>" + results.text + "</p>";
-          else element.innerHTML += "<p> ERROR: FAILED TO LOAD TEXT</p>";
+          TestAreaElement.innerHTML += "<h1>NEXT FILE</h1>";
+          if( results.text ) TestAreaElement.innerHTML += "<p>" + results.text + "</p>";
+          else TestAreaElement.innerHTML += "<p> ERROR: FAILED TO LOAD TEXT</p>";
           if( results.image ) {
             results.image.style.maxWidth = "100px";
             results.image.style.maxHeight = "100px";
-            element.appendChild(results.image);
+            TestAreaElement.appendChild(results.image);
           }
-          else element.innerHTML += "<p> ERROR: FAILED TO LOAD IMAGE</p>";
+          else TestAreaElement.innerHTML += "<p> ERROR: FAILED TO LOAD IMAGE</p>";
         } );
       }},
       {name:"Test: fileFileOfTextFiles()", action:()=>{
-        let element = document.getElementById("TestAreaID");
-
         // We get a callback for every file loaded from the filelist in our specified file
         //
         fileFileOfTextFiles( "TestFiles/FileList.txt", (textObj) => {
-          if( textObj.fileName && textObj.text ) element.innerHTML += `<h1>NEXT FILE: ${textObj.fileName}</h1> <p>${textObj.text} </p>`;
-          else if( textObj.fileName ) element.innerHTML += `<h1>NEXT FILE: ${textObj.fileName}</h1> ERROR: FAILED TO LOAD </p>`;
-          else  element.innerHTML += "<h1>NEXT FILE</h1> <p> ERROR: FAILED TO LOAD </p>";
+          if( textObj.fileName && textObj.text ) TestAreaElement.innerHTML += `<h1>NEXT FILE: ${textObj.fileName}</h1> <p>${textObj.text} </p>`;
+          else if( textObj.fileName ) TestAreaElement.innerHTML += `<h1>NEXT FILE: ${textObj.fileName}</h1> ERROR: FAILED TO LOAD </p>`;
+          else  TestAreaElement.innerHTML += "<h1>NEXT FILE</h1> <p> ERROR: FAILED TO LOAD </p>";
         } );
       }},
       {name:"Test: fileReadText()", action:()=>{

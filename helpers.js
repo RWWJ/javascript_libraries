@@ -32,22 +32,41 @@
 //
 //  19 Nov 2022  Added uuid() and initSlider()
 //        Version 2.0
+//  20 Dec 2022  Added cssStylesheet()
+//        Version 2.1
+//  27 Dec 2022  Added emptyObj( )
+//        Version 2.2
+//   4 Jan 2023  Added capitalize() synonym for capitalizeWords()
+//        Version 2.3
+//   4 Jan 2023  Added filename()
+//        Version 2.3a
+//   4 Jan 2023  Added makeDOMId( ) (moved her from dialog_box.js)
+//        Version 2.3b
+//   9 Jan 2023  Added guid() and smallId()
+//   6 Feb 2023  Added copyObj
+//        Version 2.4
+//  28 Mar 2023  Added toClipboard( event )
+//        Version 2.5
 
 
-var HelpersJsVersion = "2.0";
+var HelpersJsVersion = "2.5";
+
 
 
 // Import all with this statement (NOTE: change the directory as appropriate)
-//import {fullscreenToggle, hostName, pageName, capitalizeWords, isCellPhone, cloneObj,
-//        daysInMonth, loadScript, playSoundFile, pathFromURL, hash, uuid, extension, changeExtension,
-//        changeExt, initSlider
-//       } from "../Javascript-Libraries/Helpers-Module.js";
+//import {fullscreenToggle, hostName, pageName, capitalizeWords, capitalize, isCellPhone, cloneObj, copyObj, emptyObj,
+//        daysInMonth, loadScript, playSoundFile, pathFromURL, hash, uuid, guid, smallId, makeDOMId,
+//        filename, extension, changeExtension,changeExt, initSlider, toClipboard
+//       } from "../javascript_libraries/Helpers-Module.js";
 
 
-// export {fullscreenToggle, pageName, hostName, capitalizeWords, isCellPhone, cloneObj,
-//         daysInMonth, loadScript, playSoundFile, pathFromURL, hash, uuid, extension, changeExtension,
-//         changeExt, initSlider
+// export {fullscreenToggle, pageName, hostName, capitalizeWords, capitalize, isCellPhone, cloneObj, copyObj, emptyObj,
+//         daysInMonth, loadScript, playSoundFile, pathFromURL, hash, uuid, guid, smallId, makeDOMId,
+//         filename, extension, changeExtension,changeExt, initSlider, toClipboard
 //        };
+
+//   ONLY needed in Node Js, not in browser (client side) code
+// import {performance} from "perf_hooks";
 
 
 //        Functions
@@ -56,8 +75,11 @@ var HelpersJsVersion = "2.0";
 // hostName( )
 // pageName( )
 // capitalizeWords( str )
+// capitalize( str )
 // isCellPhone( )
 // cloneObj( src )
+// copyObj( src, dst )
+// emptyObj( obj )
 // daysInMonth( theDate = null )
 // loadScript( jsFileName, callback = null )
 // playSoundFileWebAudio( fileName, volume = 0.01 )
@@ -66,10 +88,17 @@ var HelpersJsVersion = "2.0";
 // pathFromURL( url )
 // hash( string )
 // uuid()
+// guid()
+// smallId( )
+// makeDOMId( name, suffix = "ID" )
+// filename( filename  )
 // extension( filename )
 // changeExtension( fileName, ext )
 // changeExt( fileName, ext )
 // initSlider( {name="Percentage", sliderId=null, parent = null, callback=null, min=0, max=100} )
+// cssStylesheet( name, styleText )
+// toClipboard( event )
+//
 
 
 //
@@ -118,10 +147,20 @@ function hostName( ) {
 //
 // Capitalize all words that start with a character (i.e. not with a # or symbol)
 //
+// Equivelent to capitalize()
+//
 function capitalizeWords( str ) {
+  // return str.split(" ").map(str => str[0].toUpperCase()+str.slice(1) ).join(" ");
   return str.replace( /\b(\w)/g , match => match.toUpperCase() );
 }
 
+
+//
+// Synonym for capitalizeWords()
+//
+function capitalize( str ) {
+  return capitalizeWords( str );
+}
 
 
 //
@@ -134,6 +173,9 @@ function capitalizeWords( str ) {
 //
 function isCellPhone( ) {
   return (navigator.userAgent.indexOf("Mobi") > 0) || (navigator.userAgent.indexOf("Phone") > 0);
+
+  // Dom (dcode on youtube) uses the line below in his video "How to Easily Detect Mobile Devices with JavaScript"
+  // return /Android|iPhone/i.test(navigator.userAgent);
 }
 
 
@@ -169,6 +211,49 @@ function cloneObj( src ) {
   else    console.error("ERROR cloneObj(): Unexpected data type"); // Can not clone functions, etc..
 
   return dst;
+}
+
+
+
+//
+// Copy src object to dest object (like a deep clone, but a deep copy)
+//
+// Similar to cloneObj(), but totaly different :-)
+//
+function copyObj( src, dst ) {
+    // Basic type, not an array, not null (is the typeof "object") not a date and not an object
+    if( typeof src != "object" || src == null )  ;  // No change to dst
+    else if(src instanceof Date) {  // Handle Dates, I don't use them, but may as well cover it
+      dst = new Date();
+      dst.setTime(src.getTime());
+    }
+    else if( typeof src == "object" ) { // Handle arrays ([]) and "real" objects (i.e. {})
+      for( let property in src ) {
+        if( src.hasOwnProperty(property) && src[property] != undefined ) {
+          if( typeof src[property] != "object" || src[property] == null ) { // Of course, null IS an "object". Crazy!
+            dst[property] = src[property];
+          }
+          else if( typeof dst[property] != "object" || dst[property] == null ) {
+            dst[property] = copyObj( Array.isArray(src[property]) ? [] : {}, src[property] );  // Copy to ew [] or {}
+          }
+          else {
+            copyObj(src[property], dst[property]);
+          }
+        }
+      }
+    }
+
+    return dst;
+}
+
+
+
+//
+// This only tests for emptiness. Use Object.keys(obj).length if you want to know the number of properties
+//
+function emptyObj( obj ) {
+  for( let property in obj ) return false; // If there are ANY properties, then it is not empty
+  return true;
 }
 
 
@@ -385,13 +470,63 @@ function hash( str, seed = 0) {
 //
 //  NOTE: The UUID is a valid html class and id name
 //
-//  23 Feb 2022	Created by Ray Wallace based on code from by broofa at:
+//  23 Feb 2022	Created by Ray Wallace based on code from by broofa, called uuidv4() at:
 //    https://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid/2117523#2117523
+//
+// Synonym for guid()
 //
 function uuid() {
   return crypto.randomUUID ?
     crypto.randomUUID() : // .randomUUID() is only avalable in https:// (secure) connections
     ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) );
+    // Equivelent to:
+    // `${1e7}-${1e3}-${4e3}-${8e3}-${1e11}`.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) );
+    // --or--
+    //    "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16) );
+}
+
+//
+// Synonym for uuid()
+//
+function guid() {
+  return uuid();
+}
+
+//
+// Returns a 19 character string (17 hex digits and 2 _'s)
+// NOTE: Note in about 500 years, the date will be such that the string will be one hex digit longer :-)
+//
+function smallId( ) {
+  // Ignore the fractional part of .now(), since most browsers round it up to full milliseoconds (or more)
+  return Date.now().toString(16).padStart(12,"0") + "_" + Math.floor(performance.now()%65535).toString(16).padStart(4,"0") + "_" + Math.floor(Math.random()*256).toString(16).padStart(2,"0");
+}
+
+//
+// Creates a unique DOM Element ID with __, name, datetime and specified suffix
+//
+// Sanitizes name by replacing spaces and invalid ID characters with _ (underscore)
+//
+function makeDOMId( name, suffix = "ID" ) {
+  let uniqueStr = performance.now().toString(16);
+
+  return "__" + name.replace( /[\[\]\s!@#$%^&\*\(\)]/g, "_" ) + "_" + uniqueStr + "_" + suffix;
+}
+
+
+
+//
+// Returns filename with the path stripped off
+//
+function filename( fileName ) {
+  let pathEnd;
+
+  pathEnd = fileName.lastIndexOf( "/" );
+  if( pathEnd != -1 ) fileName = fileName.substring( pathEnd+1 );
+
+  pathEnd = fileName.lastIndexOf( "\\" );
+
+  if( pathEnd != -1 ) return fileName.substring( pathEnd+1 );
+  else return fileName;
 }
 
 
@@ -548,6 +683,61 @@ function initSlider( {name="Percentage", sliderId=null, parent = null, callback=
 
   return sliderId;
 }
+
+
+function cssStylesheet( name, styleText ) {
+  let newStyleSheet;
+  let existingSheets;
+  let newRule;
+  let exists = false;
+
+  // Figure out if we are doing the workaround for browser not implementing CSSStyleSheet() constructor
+  if( document.adoptedStyleSheets ) existingSheets = document.adoptedStyleSheets;
+  else existingSheets = document.styleSheets;
+
+  // First see if we've already created this css style
+  for( let next = 0 ; !exists && next < existingSheets.length; ++next ) {
+    let sheetFirstRule = existingSheets[next].cssRules[0].cssText;
+    // Look for our mark (a class we use only for this purpose) and the name
+    exists = sheetFirstRule.startsWith(".DlgCSSCreatedFlag") && sheetFirstRule.includes(name);
+  }
+
+  if( !exists ) {
+    // Go ahead and create the css stylesheet
+    if( document.adoptedStyleSheets ) {
+      newStyleSheet = new CSSStyleSheet();
+      document.adoptedStyleSheets = [newStyleSheet];  // Tell the DOM about our new styleSheet
+    }
+    else {
+      let styleElement = document.createElement( "style" );
+      document.head.appendChild( styleElement );
+      newStyleSheet = styleElement.sheet;
+    }
+
+    // Set the contents of the stylesheet (Synchronously)
+    newStyleSheet.replaceSync( styleText );
+
+    // Set a flag so we know we've created this stylesheet
+    newStyleSheet.insertRule( `.DlgCSSCreatedFlag { content: "${name}" }` ); // Ensure it's last rule that we add, so we find it at .cssRules[0]
+  }
+}
+
+
+
+//
+// Copy selected text of .target to the clipboard. If there is no selection then copy everything
+//
+function toClipboard( event ) {
+  let txt;
+
+  // If there is no selection, then copy everything, else copy the selection
+  if( event.target.selectionStart == event.target.selectionEnd ) txt = event.target.value
+  else txt = event.target.value.substring(event.target.selectionStart, event.target.selectionEnd)
+
+  // Put it on the clipboard
+  navigator.clipboard.writeText( txt )
+}
+
 
 
 
